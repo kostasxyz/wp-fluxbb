@@ -1,0 +1,41 @@
+# Copyright (C) 2013 WPFluxBB
+# This file is distributed under the same license as the WPFluxBB package.
+msgid ""
+msgstr ""
+"Project-Id-Version: WPFluxBB 1.0.0\n"
+"Report-Msgid-Bugs-To: http://wordpress.org/tag/wp-fluxbb\n"
+"POT-Creation-Date: 2013-12-07 09:51:46+00:00\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2013-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+
+#: admin/class-wp-fluxbb-admin.php:146 admin/class-wp-fluxbb-admin.php:147
+msgid "WPFluxBB Settings"
+msgstr ""
+
+#: admin/class-wp-fluxbb-admin.php:173
+msgid "Settings"
+msgstr ""
+
+#. Plugin Name of the plugin/theme
+msgid "WPFluxBB"
+msgstr ""
+
+#. Plugin URI of the plugin/theme
+msgid "https://github.com/Askelon/WPFluxBB"
+msgstr ""
+
+#. Description of the plugin/theme
+msgid "Bridge between WordPress and FluxBB"
+msgstr ""
+
+#. Author of the plugin/theme
+msgid "Charlie MERLAND"
+msgstr ""
+
+#. Author URI of the plugin/theme
+msgid "http://charliemerland.me"
+msgstr ""

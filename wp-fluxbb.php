@@ -48,16 +48,9 @@ add_action( 'plugins_loaded', array( 'WPFluxBB', 'get_instance' ) );
  *----------------------------------------------------------------------------*/
 
 /*
- * If you want to include Ajax within the dashboard, change the following
- * conditional to:
- *
- * if ( is_admin() ) {
- *   ...
- * }
- *
  * The code below is intended to to give the lightest footprint possible.
  */
-if ( is_admin() && ( ! defined( 'DOING_AJAX' ) || ! DOING_AJAX ) ) {
+if ( is_admin() ) {
 
 	require_once( plugin_dir_path( __FILE__ ) . 'admin/class-wp-fluxbb-admin.php' );
 	add_action( 'plugins_loaded', array( 'WPFluxBB_Admin', 'get_instance' ) );

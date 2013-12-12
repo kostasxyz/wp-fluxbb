@@ -31,7 +31,6 @@ if ( ! defined( 'WPINC' ) ) {
  * Public-Facing Functionality
  *----------------------------------------------------------------------------*/
 
-require_once( plugin_dir_path( __FILE__ ) . 'fluxbb-config.php' );
 require_once( plugin_dir_path( __FILE__ ) . 'public/class-wp-fluxbb.php' );
 
 /*

@@ -34,6 +34,24 @@ class WPFluxBB {
 	protected $plugin_slug = 'wp-fluxbb';
 
 	/**
+	 * Plugin Settings
+	 * 
+	 * @since    1.0.0
+	 * 
+	 * @var      array
+	 */
+	protected $settings = null;
+
+	/**
+	 * Plugin Settings slug
+	 * 
+	 * @since    1.0.0
+	 * 
+	 * @var      string
+	 */
+	protected $plugin_settings = 'wpfluxbb_settings';
+
+	/**
 	 * Instance of this class.
 	 *
 	 * @since    1.0.0
@@ -52,24 +70,27 @@ class WPFluxBB {
 
 		global $wpdb;
 
-		// Load plugin text domain
 		add_action( 'init', array( $this, 'load_plugin_textdomain' ) );
 
-		// Activate plugin when new blog is added
 		add_action( 'wpmu_new_blog', array( $this, 'activate_new_site' ) );
 
 		$this->fluxbb_config = $this->get_fluxbb_config();
-		$this->fluxdb = &$this->get_fluxbb_db();
+
+		$this->fluxdb = $this->get_fluxbb_db();
 		$this->wpdb   = &$wpdb;
 
-		// Load public-facing style sheet and JavaScript.
+		$this->settings = array(
+			'fluxbb_config_file' => '',
+			'wpfluxbb' => array(
+				'auto_insert_user' => 0
+			)
+		);
+		$this->wpfluxbb_default_settings();
+
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_styles' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 
-		// FluxBB login
 		add_action( 'wp_authenticate', array( $this, 'wpfluxbb_authenticate' ), 1, 2 );
-
-		// FluxBB register URL
 		add_filter( 'register_url', array( $this, 'wpfluxbb_register_url' ) );
 
 
@@ -84,9 +105,16 @@ class WPFluxBB {
 	 */
 	public function get_fluxbb_config() {
 
-		global $fluxbb_config;
+		$config_file = $this->wpfluxbb_o('fluxbb_config_file');
 
-		return ( is_null( $fluxbb_config ) ? false : $fluxbb_config );
+		if ( ! file_exists( $config_file ) )
+			return false;
+
+		require_once $config_file;
+		$fluxbb_config = array();
+		
+
+		return $fluxbb_config;
 	}
 
 	/**
@@ -98,7 +126,7 @@ class WPFluxBB {
 	 */
 	public function get_fluxbb_db() {
 
-		if ( ! $this->fluxbb_config )
+		if ( empty( $this->fluxbb_config ) )
 			return false;
 
 		extract( $this->fluxbb_config['db'] );
@@ -283,12 +311,27 @@ class WPFluxBB {
 	}
 
 	/**
+	 * Load WPFluxBB default settings if unexisting.
+	 *
+	 * @since    1.0.0
+	 */
+	public function wpfluxbb_default_settings( $force = false ) {
+
+		$options = get_option( $this->plugin_settings );
+		if ( ( false === $options || ! is_array( $options ) ) || true == $force ) {
+			delete_option( $this->plugin_settings );
+			add_option( $this->plugin_settings, $this->settings );
+		}
+	}
+
+	/**
 	 * Apply 'register_url' filter: redirect Registration to FluxBB's
 	 * 
 	 * @since    1.0.0
 	 */
-	public function wpfluxbb_register_url( $url, $redirect ) {
-		return $this->fluxbb_config['base_url'] . '/register.php';
+	public function wpfluxbb_register_url( $url ) {
+		//return $this->fluxbb_config['base_url'] . '/register.php';
+		return $url;
 	}
 
 	/**
@@ -316,7 +359,7 @@ class WPFluxBB {
 	 */
 	public function wpfluxbb_authenticate( $user_login, $user_pass ) {
 
-		if ( ! isset( $user_login ) && ! isset( $user_pass ) || '' == $user_login || '' == $user_pass )
+		if ( ! $this->fluxdb || ! isset( $user_login ) && ! isset( $user_pass ) || '' == $user_login || '' == $user_pass )
 			return false;
 
 		$user = $this->fluxdb->get_row(
@@ -427,6 +470,75 @@ class WPFluxBB {
 			$hash = pack( 'H*', $hash );
 
 		return $hash;
+	}
+
+	/**
+	 * Built-in option finder/modifier
+	 * Default behavior with no empty search and value params results in
+	 * returning the complete WPFluxBB options' list.
+	 * 
+	 * If a search query is specified, navigate through the options'
+	 * array and return the asked option if existing, empty string if it
+	 * doesn't exist.
+	 * 
+	 * If a replacement value is specified and the search query is valid,
+	 * update WPFluxBB options with new value.
+	 * 
+	 * Return can be string, boolean or array. If search, return array or
+	 * string depending on search result. If value, return boolean true on
+	 * success, false on failure.
+	 *
+	 * @since    1.0.0
+	 * 
+	 * @param    string        Search query for the option: 'aaa-bb-c'. Default none.
+	 * @param    string        Replacement value for the option. Default none.
+	 * 
+	 * @return   string|boolean|array        option array of string, boolean on update.
+	 */
+	public function wpfluxbb_o( $search = '', $value = null ) {
+
+		$options = get_option( $this->plugin_settings, $this->settings );
+
+		if ( '' != $search && is_null( $value ) ) {
+			$s = explode( '-', $search );
+			$o = $options;
+			while ( count( $s ) ) {
+				$k = array_shift( $s );
+				if ( isset( $o[ $k ] ) )
+					$o = $o[ $k ];
+				else
+					$o = '';
+			}
+		}
+		else if ( '' != $search && ! is_null( $value ) ) {
+			$s = explode( '-', $search );
+			$this->wpfluxbb_o_( $options, $s, $value );
+			$o = update_option( $this->plugin_settings, $options );
+		}
+		else {
+			$o = $options;
+		}
+
+		return $o;
+	}
+
+	/**
+	 * Built-in option modifier
+	 * 
+	 * Navigate through WPFluxBB options to find a matching option and update
+	 * its value.
+	 *
+	 * @since    1.0.0
+	 * 
+	 * @param    array         Options array passed by reference
+	 * @param    string        key list to match the specified option
+	 * @param    string        Replacement value for the option. Default none
+	 */
+	private function wpfluxbb_o_( &$array, $key, $value = '' ) {
+		$a = &$array;
+		foreach ( $key as $k )
+			$a = &$a[ $k ];
+		$a = $value;
 	}
 
 }

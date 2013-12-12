@@ -55,6 +55,7 @@ class WPFluxBB_Admin {
 		// Call $plugin_slug from public plugin class.
 		$plugin = WPFluxBB::get_instance();
 		$this->plugin_slug = $plugin->get_plugin_slug();
+		$this->plugin = &$plugin;
 
 		// Load admin style sheet and JavaScript.
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_styles' ) );
@@ -68,6 +69,7 @@ class WPFluxBB_Admin {
 		add_filter( 'plugin_action_links_' . $plugin_basename, array( $this, 'add_action_links' ) );
 
 		add_action( 'wp_ajax_scan_folders', array( $this, 'wpfluxbb_scan_folders_callback' ) );
+		add_action( 'wp_ajax_test_config_file', array( $this, 'wpfluxbb_test_config_file_callback' ) );
 
 	}
 
@@ -130,7 +132,9 @@ class WPFluxBB_Admin {
 			wp_localize_script(
 				$this->plugin_slug . '-admin-script', 'wp_ajax_',
 				array(
-					'ajax_url' => admin_url( 'admin-ajax.php' ),
+					'ajax_url'     => admin_url( 'admin-ajax.php' ),
+					'file_exists'  => __( 'File {file} exists.', $this->plugin_slug ),
+					'file_invalid' => __( 'File {file} is invalid.', $this->plugin_slug )
 				)
 			);
 		}
@@ -163,6 +167,10 @@ class WPFluxBB_Admin {
 	 * @since    1.0.0
 	 */
 	public function display_plugin_admin_page() {
+
+		if ( isset( $_POST['wpfluxbb'] ) && '' != $_POST['wpfluxbb'] )
+			update_option( 'wpfluxbb_settings', $_POST['wpfluxbb'] );
+
 		include_once( 'views/admin.php' );
 	}
 
@@ -216,8 +224,20 @@ class WPFluxBB_Admin {
 	public function wpfluxbb_scan_folders_callback() {
 
 		$scan = $this->wpfluxbb_scan_folders();
-		//print_r( $scan );
 		echo json_encode( $scan );
+		die();
+	}
+
+	/**
+	 * AJAX Callback for wpfluxbb_test_config_file()
+	 *
+	 * @since    1.0.0
+	 */
+	public function wpfluxbb_test_config_file_callback() {
+
+		$file = ( isset( $_GET['config_file'] ) && '' != $_GET['config_file'] ? $_GET['config_file'] : null );
+		$test = $this->wpfluxbb_test_config_file( $file );
+		echo json_encode( $test );
 		die();
 	}
 
@@ -257,6 +277,9 @@ class WPFluxBB_Admin {
 
 	/**
 	 * Check the validity of submitted FluxBB Config Files.
+	 * 
+	 * Kind of an alias for passing multiple files to
+	 * wpfluxbb_validate_config_file()
 	 *
 	 * @since    1.0.0
 	 * 
@@ -269,8 +292,33 @@ class WPFluxBB_Admin {
 		if ( empty( $files ) )
 			return false;
 
+		$valid  = array();
+		$errors = array();
+
+		foreach ( $files as $i => $file )
+			$valid[] = $this->wpfluxbb_validate_config_file( $file );
+
+		return $valid;
+	}
+
+	/**
+	 * Check the validity of submitted FluxBB Config File.
+	 * 
+	 * If $verbose is set to true, the function will return an array of
+	 * detailled errors if anything went wrong. If $verbose is false, only
+	 * return boolean status, valid or not.
+	 *
+	 * @since    1.0.0
+	 * 
+	 * @param    array    $files Possible FluxBB Config Files to check
+	 * @param    boolean  $verbose Chatty or not chatty
+	 * 
+	 * @return   array    Valid Config Files if any.
+	 */
+	private function wpfluxbb_validate_config_file( $file, $verbose = true ) {
+
 		$required_vars = array(
-			array( 'db_type', true ),
+			array( 'db_type', false ),
 			array( 'db_host', true ),
 			array( 'db_name', true ),
 			array( 'db_username', true ),
@@ -283,42 +331,88 @@ class WPFluxBB_Admin {
 			array( 'cookie_seed', true )
 		);
 
-		$valid  = array();
-		$errors = array();
+		if ( ! file_exists( $file ) )
+			return array(
+				'file'   => $file,
+				'errors' => array(
+					array(
+						'error_code' => 1,
+						'error_message' => sprintf( __( 'File "%s" does not exists.', $this->plugin_slug ), $file )
+					)
+				)
+			);
 
-		foreach ( $files as $file ) {
+		$size = filesize( $file );
+		$perm = is_readable( $file );
 
-			$size = filesize( $file );
-			$perm = is_readable( $file );
+		$valid = array(
+			'file'   => $file,
+			'errors' => array()
+		);
 
-			if ( $size && $perm ) {
-				$content = file_get_contents( $file );
-				foreach ( $required_vars as $req ) {
-					$var_name = '$' . $req[0];
-					$required = $req[1];
-					if ( false === stripos( $content, $var_name ) ) {
-						$errors[] = array(
-							'error_code' => 2,
-							'error_message' => sprintf( __( 'Variable "%s" is missing in %s file.', $this->plugin_slug ), $var_name, $file )
-						);
-					}
-					else if ( $required && preg_match( '~^\s*'.'\\'.$var_name.'\s*=\s*(["\'])\s*\1[^\S\r\n]*\R?~m', $content ) ) {
-						$errors[] = array(
-							'error_code' => 3,
-							'error_message' => sprintf( __( 'Variable "%s" is empty in %s file.', $this->plugin_slug ), $var_name, $file )
-						);
-					}
+		if ( $size && $perm ) {
+
+			$content = file_get_contents( $file );
+			$valid['content'] = $content;
+
+			foreach ( $required_vars as $req ) {
+				$var_name = '$' . $req[0];
+				$required = $req[1];
+				if ( false === stripos( $content, $var_name ) ) {
+					$valid['errors'][] = array(
+						'error_code' => 2,
+						'error_message' => sprintf( __( 'Variable "%s" is missing in %s file.', $this->plugin_slug ), $var_name, $file )
+					);
 				}
-
-				if ( empty( $errors ) )
-					$valid[] = $file;
+				else if ( $required && preg_match( '~^\s*'.'\\'.$var_name.'\s*=\s*(["\'])\s*\1[^\S\r\n]*\R?~m', $content ) ) {
+					$valid['errors'][] = array(
+						'error_code' => 3,
+						'error_message' => sprintf( __( 'Variable "%s" is empty in %s file.', $this->plugin_slug ), $var_name, $file )
+					);
+				}
 			}
 		}
+		else if ( ! $size ) {
+			$valid['errors'][] = array(
+				'error_code' => 4,
+				'error_message' => sprintf( __( 'File %s exists but seems empty.', $this->plugin_slug ), $file )
+			);
+		}
+		else if ( ! $perm ) {
+			$valid['errors'][] = array(
+				'error_code' => 5,
+				'error_message' => sprintf( __( 'File %s exists but seems unreadable (check permissions).', $this->plugin_slug ), $file )
+			);
+		}
 
-		if ( empty( $valid) && ! empty( $errors ) )
-			return $errors;
+		if ( ! $verbose )
+			return empty( $valid['errors'] );
 
 		return $valid;
+	}
+
+	/**
+	 * Test a FluxBB Config File
+	 *
+	 * @since    1.0.0
+	 */
+	private function wpfluxbb_test_config_file( $file ) {
+
+		if ( is_null( $file ) )
+			return __( 'Wrong file path.', 'wp-fluxbb' );
+
+		$validate = $this->wpfluxbb_validate_config_file( $file );
+		if ( ! empty( $validate['errors'] ) )
+			return array( 'errors' => $validate['errors'] );
+
+		require_once $file;
+
+		$test_db = new wpdb( $db_username, $db_password, $db_name, $db_host );
+
+		if ( ! empty( $test_db->error ) )
+			return __( 'Failed to connect to the database.', 'wp-fluxbb' );
+
+		return array();
 	}
 
 }

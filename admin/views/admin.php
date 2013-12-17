@@ -56,6 +56,21 @@
 			</tbody>
 		</table>
 
+		<h3 class="title"><?php _e( 'FluxBB User Import', 'wp-fluxbb' ); ?></h3>
+		<table class="form-table">
+			<tbody>
+				<tr>
+					<th><label for="fluxbb_config_file"><?php _e( 'Synchronise WordPress and FluxBB Users', 'wp-fluxbb' ); ?></label></th>
+					<td>
+<?php
+$users = $this->wpfluxbb_get_missing_users();
+?>
+						<?php printf( __( 'Currently %s FluxBB Users are not synchronised with WordPress.', 'wp-fluxbb' ), '<strong>' . count( $users ) . '</strong>' ); ?>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+
 		<p class="submit"><input type="submit" name="submit" id="submit" class="button button-primary" value="Enregistrer les modifications"></p>
 	</form>
 

@@ -415,4 +415,35 @@ class WPFluxBB_Admin {
 		return array();
 	}
 
+	/**
+	 * Fetch Users registered on FluxBB but not in WordPress.
+	 *
+	 * @since    1.0.0
+	 */
+	public function wpfluxbb_get_missing_users() {
+
+		global $wpdb;
+
+		if ( ! $this->plugin->fluxdb )
+			return false;
+
+		$users = array();
+
+		$wp_users = $this->plugin->wpdb->get_results(
+			"SELECT user_login AS users FROM {$this->plugin->wpdb->users}
+			 UNION
+			 SELECT user_nicename AS users FROM {$this->plugin->wpdb->users}
+			 UNION
+			 SELECT display_name AS users FROM {$this->plugin->wpdb->users}",
+			ARRAY_A
+		);
+
+		array_walk( $wp_users, create_function( '&$user', '$user = \'"\'.$user["users"].\'"\';' ) );
+		$wp_users = implode( ', ', $wp_users );
+
+		$users = $this->plugin->fluxdb->get_results( "SELECT * FROM {$this->plugin->fluxdb->users} WHERE username NOT IN ( {$wp_users} )" );
+
+		return $users;
+	}
+
 }

@@ -77,7 +77,7 @@ class WPFluxBB {
 		$this->fluxbb_config = $this->get_fluxbb_config();
 
 		$this->fluxdb = $this->get_fluxbb_db();
-		$this->wpdb   = &$wpdb;
+		$this->wpdb   = $wpdb;
 
 		$this->settings = array(
 			'fluxbb_config_file' => '',
@@ -111,8 +111,22 @@ class WPFluxBB {
 			return false;
 
 		require_once $config_file;
-		$fluxbb_config = array();
-		
+		$fluxbb_config = array(
+			'db' => array(
+				'host'     => $db_host,
+				'name'     => $db_name,
+				'username' => $db_username,
+				'password' => $db_password,
+				'prefix'   => $db_prefix,
+			),
+			'cookie' => array(
+				'name'   => $cookie_name,
+				'domain' => $cookie_domain,
+				'path'   => $cookie_path,
+				'secure' => $cookie_secure,
+				'seed'   => $cookie_seed
+			)
+		);
 
 		return $fluxbb_config;
 	}

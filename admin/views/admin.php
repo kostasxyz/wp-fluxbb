@@ -47,9 +47,9 @@
 					<td>
 						<input name="wpfluxbb[fluxbb_config_file]" id="fluxbb_config_file" type="text" value="<?php echo $this->plugin->wpfluxbb_o('fluxbb_config_file'); ?>" size="42" />
 <?php if ( '' != $this->plugin->wpfluxbb_o('fluxbb_config_file') ) { ?>
-						<button id="wpfluxbb_test_config_file" class="button button-secondary button-small">Test Config File</button>
+						<button id="wpfluxbb_test_config_file" class="button button-secondary button-small"><?php _e( 'Test Config File', 'wp-fluxbb' ); ?></button>
 <?php } ?>
-						<button id="wpfluxbb_scan_config_file" class="button button-secondary button-small">Scan folders</button>
+						<button id="wpfluxbb_scan_config_file" class="button button-secondary button-small"><?php _e( 'Scan folders', 'wp-fluxbb' ); ?></button>
 						<div id="wpfluxbb_scan_results"><pre></pre></div>
 					</td>
 				</tr>
@@ -62,10 +62,19 @@
 				<tr>
 					<th><label for="fluxbb_config_file"><?php _e( 'Synchronise WordPress and FluxBB Users', 'wp-fluxbb' ); ?></label></th>
 					<td>
-<?php
-$users = $this->wpfluxbb_get_missing_users();
-?>
-						<?php printf( __( 'Currently %s FluxBB Users are not synchronised with WordPress.', 'wp-fluxbb' ), '<strong>' . count( $users ) . '</strong>' ); ?>
+<?php $users = $this->wpfluxbb_get_missing_users(); ?>
+						<button id="wpfluxbb_user_sync" class="button button-secondary button-small" <?php if ( ! count( $users ) ) echo 'disabled'; ?>><?php _e( 'Synchronise Users', 'wp-fluxbb' ); ?></button>
+						<div id="wpfluxbb_user_sync_results"></div>
+						<p>
+							<em><?php printf( __( 'Currently %s FluxBB Users are not synchronised with WordPress.', 'wp-fluxbb' ), '<strong>' . count( $users ) . '</strong>' ); ?>
+							<a href="#" onclick="l=document.getElementById('missing_users_list');if(l.style.display!='none'){l.style.display='none';this.innerHTML='<?php _e( 'Show the list', 'wp-fluxbb' ); ?>';}else{l.style.display='block';this.innerHTML='<?php _e( 'Hide the list', 'wp-fluxbb' ); ?>';}return false;"><?php _e( 'Show the list', 'wp-fluxbb' ); ?></a></em>
+						</p>
+						<div id="missing_users_list" style="display:none"><?php
+foreach ( $users as $i => $user ) {
+	$users[ $i ] = sprintf( '<a href="profile.php?id=%d">%s</a>', $user->id, $user->username );
+}
+echo implode( ', ', $users );
+?></div>
 					</td>
 				</tr>
 			</tbody>

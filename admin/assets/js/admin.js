@@ -60,6 +60,25 @@
 			});
 		}
 
+		if ( $('#wpfluxbb_user_sync').length ) {
+			$('#wpfluxbb_user_sync').click(function(e) {
+				e.preventDefault();
+				$.ajax({
+					url: wp_ajax_.ajax_url,
+					type: 'GET',
+					data: {
+						action: 'user_sync'
+					},
+					success: function(response) {
+						$r = $('#wpfluxbb_user_sync_results');
+						$r.empty();
+
+						
+					}
+				});
+			});
+		}
+
 	});
 
 }(jQuery));

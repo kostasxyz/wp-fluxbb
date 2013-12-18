@@ -81,18 +81,19 @@ class WPFluxBB {
 
 		$this->settings = array(
 			'fluxbb_config_file' => '',
+			'fluxbb_base_url' => '',
 			'wpfluxbb' => array(
-				'auto_insert_user' => 0
+				'auto_insert_user'  => 0,
+				'remove_login_logo' => 1,
 			)
 		);
 		$this->wpfluxbb_default_settings();
 
-		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_styles' ) );
-		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
-
 		add_action( 'wp_authenticate', array( $this, 'wpfluxbb_authenticate' ), 1, 2 );
-		add_filter( 'register_url', array( $this, 'wpfluxbb_register_url' ) );
+		add_action( 'login_head', array( $this, 'wpfluxbb_remove_login_logo' ) );
 
+		add_filter( 'register_url', array( $this, 'wpfluxbb_register_url' ) );
+		add_filter( 'lostpassword_url', array( $this, 'wpfluxbb_lostpassword_url' ) );
 
 	}
 
@@ -344,8 +345,30 @@ class WPFluxBB {
 	 * @since    1.0.0
 	 */
 	public function wpfluxbb_register_url( $url ) {
-		//return $this->fluxbb_config['base_url'] . '/register.php';
+		return $this->wpfluxbb_o('fluxbb_base_url') . '/register.php';
 		return $url;
+	}
+
+	/**
+	 * Apply 'lostpassword_url' filter: redirect Password Recovery process
+	 * to FluxBB's
+	 * 
+	 * @since    1.0.0
+	 */
+	public function wpfluxbb_lostpassword_url( $url ) {
+		return $this->wpfluxbb_o('fluxbb_base_url') . '/login.php?action=forget';
+		return $url;
+	}
+
+	/**
+	 * Remove the WordPress logo on Login page, inappropriate since we're
+	 * using the page to log in both WordPress and FluxBB.
+	 * 
+	 * @since    1.0.0
+	 */
+	public function wpfluxbb_remove_login_logo() {
+		if ( 1 == $this->wpfluxbb_o('remove_login_logo') )
+			echo '<style type="text/css">h1 a {background:transparent !important;}</style>';
 	}
 
 	/**

@@ -36,6 +36,14 @@
 						<p><em><?php _e( 'If the User trying to log in has a valid FluxBB account but no WordPress account, authentification will fail. If this option is set to "On" WPFluxBB will automatically create a WP Account and validate the authentification. Default if "Off".', $this->plugin_slug ); ?></em></p>
 					</td>
 				</tr>
+				<tr>
+					<th><?php _e( 'Hide WordPress Logo in Login Page', $this->plugin_slug ); ?></th>
+					<td>
+						<label><input name="wpfluxbb[remove_login_logo]" type="radio" value="1" <?php checked( $this->plugin->wpfluxbb_o('remove_login_logo'), 1 ); ?>> <?php _e( 'On', $this->plugin_slug ); ?></label>
+						<label><input name="wpfluxbb[remove_login_logo]" type="radio" value="0" <?php checked( $this->plugin->wpfluxbb_o('remove_login_logo'), 0 ); ?>> <?php _e( 'Off', $this->plugin_slug ); ?></label>
+						<p><em><?php _e( 'WPFluxBB uses WordPress\' Login Page to authenticate users and log them in both WordPress and FluxBB; the WordPress Logo in the Login Page can be misleading and confuse users and therefore is not displayed by default. Turn this to "On" to display the Logo.', $this->plugin_slug ); ?></em></p>
+					</td>
+				</tr>
 			</tbody>
 		</table>
 
@@ -43,14 +51,26 @@
 		<table class="form-table">
 			<tbody>
 				<tr>
-					<th><label for="fluxbb_config_file"><?php _e( 'FluxBB Config file path', $this->plugin_slug ); ?></label></th>
+					<th>
+						<label for="fluxbb_config_file"><?php _e( 'FluxBB Config file path', $this->plugin_slug ); ?></label>
+					</th>
 					<td>
 						<input name="wpfluxbb[fluxbb_config_file]" id="fluxbb_config_file" type="text" value="<?php echo $this->plugin->wpfluxbb_o('fluxbb_config_file'); ?>" size="42" />
 <?php if ( '' != $this->plugin->wpfluxbb_o('fluxbb_config_file') ) { ?>
 						<button id="wpfluxbb_test_config_file" class="button button-secondary button-small"><?php _e( 'Test Config File', $this->plugin_slug ); ?></button>
 <?php } ?>
 						<button id="wpfluxbb_scan_config_file" class="button button-secondary button-small"><?php _e( 'Scan folders', $this->plugin_slug ); ?></button>
+						<p><em><?php _e( 'Absolute path to your forum config file, ex: <code>/home/www/public/fluxbb/config.php</code>.', $this->plugin_slug ) ?></em></p>
 						<div id="wpfluxbb_scan_results"><pre></pre></div>
+					</td>
+				</tr>
+				<tr>
+					<th>
+						<label for="fluxbb_base_url"><?php _e( 'FluxBB Base URL', $this->plugin_slug ); ?></label>
+					</th>
+					<td>
+						<input name="wpfluxbb[fluxbb_base_url]" id="fluxbb_base_url" type="text" value="<?php echo $this->plugin->wpfluxbb_o('fluxbb_base_url'); ?>" size="42" />
+						<p><em><?php _e( 'Full url of your forum, ex: <code>http://yourwebsite.com/forum</code> or <code>http://forum.yourwebsite.com</code>.', $this->plugin_slug ) ?></em></p>
 					</td>
 				</tr>
 			</tbody>
@@ -60,7 +80,9 @@
 		<table class="form-table">
 			<tbody>
 				<tr>
-					<th><label for="fluxbb_config_file"><?php _e( 'Synchronise WordPress and FluxBB Users', $this->plugin_slug ); ?></label></th>
+					<th>
+						<label for="fluxbb_config_file"><?php _e( 'Synchronise WordPress and FluxBB Users', $this->plugin_slug ); ?></label>
+					</th>
 					<td>
 <?php $users = $this->wpfluxbb_get_missing_users(); ?>
 						<button id="wpfluxbb_user_sync" class="button button-secondary button-small" <?php if ( ! count( $users ) ) echo 'disabled'; ?>><?php _e( 'Synchronise Users', $this->plugin_slug ); ?></button>

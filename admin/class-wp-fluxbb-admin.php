@@ -443,7 +443,7 @@ class WPFluxBB_Admin {
 		array_walk( $wp_users, create_function( '&$user', '$user = \'"\'.$user["users"].\'"\';' ) );
 		$wp_users = implode( ', ', $wp_users );
 
-		$users = $this->plugin->fluxdb->get_results( "SELECT * FROM {$this->plugin->fluxdb->users} WHERE id != 1 AND username NOT IN ( {$wp_users} ) ORDER BY username LIMIT 0,2" );
+		$users = $this->plugin->fluxdb->get_results( "SELECT * FROM {$this->plugin->fluxdb->users} WHERE id != 1 AND username NOT IN ( {$wp_users} ) ORDER BY username" );
 
 		return $users;
 	}

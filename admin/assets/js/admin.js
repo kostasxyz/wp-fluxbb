@@ -11,6 +11,9 @@
 					data: {
 						action: 'scan_folders'
 					},
+					beforeSend: function() {
+						$('#wpfluxbb_scan_config_file').addClass('loading');
+					},
 					success: function(response) {
 						response = $.parseJSON(response);
 						$r = $('#wpfluxbb_scan_results pre');
@@ -25,6 +28,9 @@
 								});
 							}
 						});
+					},
+					complete:function(){
+						$('#wpfluxbb_scan_config_file').removeClass('loading');
 					}
 				});
 			});
@@ -39,6 +45,9 @@
 					data: {
 						action: 'test_config_file',
 						config_file: $('#fluxbb_config_file').val()
+					},
+					beforeSend: function() {
+						$('#wpfluxbb_test_config_file').addClass('loading');
 					},
 					success: function(response) {
 						$r = $('#wpfluxbb_scan_results pre');
@@ -55,6 +64,9 @@
 								});
 							}
 						}
+					},
+					complete:function(){
+						$('#wpfluxbb_test_config_file').removeClass('loading');
 					}
 				});
 			});
@@ -69,11 +81,34 @@
 					data: {
 						action: 'user_sync'
 					},
+					beforeSend: function() {
+						$('#wpfluxbb_user_sync').addClass('loading');
+					},
 					success: function(response) {
+						response = $.parseJSON(response);
 						$r = $('#wpfluxbb_user_sync_results');
+						$errors = $('#wpfluxbb_user_sync_errors');
 						$r.empty();
+						$errors.empty();
 
-						
+						if ( undefined != response.errors ) {
+							$.each(response.errors, function() {
+								$errors.append(this+'<br />');
+							});
+						}
+
+						if ( undefined != response.users && response.users.length ) {
+							$r.append(wp_ajax_.n_users_added.replace('{n}',response.users.length)+'<br />');
+							var _users = [];
+							$.each(response.users, function() {
+								_users.push('<a href="user-edit.php?user_id='+this.id+'">'+this.name+'</a>');
+							});
+							_users = _users.join(", ");
+							$r.append(_users);
+						}
+					},
+					complete:function(){
+						$('#wpfluxbb_user_sync').removeClass('loading');
 					}
 				});
 			});

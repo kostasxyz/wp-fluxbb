@@ -1,1 +1,15 @@
 /* This stylesheet is used to style the admin option form of the plugin. */
+
+button.loading {
+	position: relative;
+}
+
+button.loading:after {
+	background: url(/wp-admin/images/wpspin_light.gif) center top no-repeat;
+	content: ' ';
+	height: 21px;
+	position: absolute;
+	right: -22px;
+	top: 2px;
+	width: 21px;
+}

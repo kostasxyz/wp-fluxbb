@@ -21,53 +21,53 @@
 	<form name="form" method="post">
 
 		<input type="hidden" id="_wpnonce" name="_wpnonce" value="c01e7d7e46"><input type="hidden" name="_wp_http_referer" value="/wp-admin/options-permalink.php">
-		<p><?php _e( '', 'wp-fluxbb' ); ?></p>
+		<p><?php _e( '', $this->plugin_slug ); ?></p>
 
-		<h3 class="title"><?php _e( 'WP-FluxBB Options', 'wp-fluxbb' ); ?></h3>
-		<p><?php _e( '', 'wp-fluxbb' ); ?></p>
+		<h3 class="title"><?php _e( 'WP-FluxBB Options', $this->plugin_slug ); ?></h3>
+		<p><?php _e( '', $this->plugin_slug ); ?></p>
 
 		<table class="form-table" style="max-width:64em">
 			<tbody>
 				<tr>
-					<th><?php _e( 'Auto Insert Users', 'wp-fluxbb' ); ?></th>
+					<th><?php _e( 'Auto Insert Users', $this->plugin_slug ); ?></th>
 					<td>
-						<label><input name="wpfluxbb[auto_insert_user]" type="radio" value="1" <?php checked( $this->plugin->wpfluxbb_o('auto_insert_user'), 1 ); ?>> <?php _e( 'On', 'wp-fluxbb' ); ?></label>
-						<label><input name="wpfluxbb[auto_insert_user]" type="radio" value="0" <?php checked( $this->plugin->wpfluxbb_o('auto_insert_user'), 0 ); ?>> <?php _e( 'Off', 'wp-fluxbb' ); ?></label>
-						<p><em><?php _e( 'If the User trying to log in has a valid FluxBB account but no WordPress account, authentification will fail. If this option is set to "On" WPFluxBB will automatically create a WP Account and validate the authentification. Default if "Off".', 'wp-fluxbb' ); ?></em></p>
+						<label><input name="wpfluxbb[auto_insert_user]" type="radio" value="1" <?php checked( $this->plugin->wpfluxbb_o('auto_insert_user'), 1 ); ?>> <?php _e( 'On', $this->plugin_slug ); ?></label>
+						<label><input name="wpfluxbb[auto_insert_user]" type="radio" value="0" <?php checked( $this->plugin->wpfluxbb_o('auto_insert_user'), 0 ); ?>> <?php _e( 'Off', $this->plugin_slug ); ?></label>
+						<p><em><?php _e( 'If the User trying to log in has a valid FluxBB account but no WordPress account, authentification will fail. If this option is set to "On" WPFluxBB will automatically create a WP Account and validate the authentification. Default if "Off".', $this->plugin_slug ); ?></em></p>
 					</td>
 				</tr>
 			</tbody>
 		</table>
 
-		<h3 class="title"><?php _e( 'FluxBB Connection', 'wp-fluxbb' ); ?></h3>
+		<h3 class="title"><?php _e( 'FluxBB Connection', $this->plugin_slug ); ?></h3>
 		<table class="form-table">
 			<tbody>
 				<tr>
-					<th><label for="fluxbb_config_file"><?php _e( 'FluxBB Config file path', 'wp-fluxbb' ); ?></label></th>
+					<th><label for="fluxbb_config_file"><?php _e( 'FluxBB Config file path', $this->plugin_slug ); ?></label></th>
 					<td>
 						<input name="wpfluxbb[fluxbb_config_file]" id="fluxbb_config_file" type="text" value="<?php echo $this->plugin->wpfluxbb_o('fluxbb_config_file'); ?>" size="42" />
 <?php if ( '' != $this->plugin->wpfluxbb_o('fluxbb_config_file') ) { ?>
-						<button id="wpfluxbb_test_config_file" class="button button-secondary button-small"><?php _e( 'Test Config File', 'wp-fluxbb' ); ?></button>
+						<button id="wpfluxbb_test_config_file" class="button button-secondary button-small"><?php _e( 'Test Config File', $this->plugin_slug ); ?></button>
 <?php } ?>
-						<button id="wpfluxbb_scan_config_file" class="button button-secondary button-small"><?php _e( 'Scan folders', 'wp-fluxbb' ); ?></button>
+						<button id="wpfluxbb_scan_config_file" class="button button-secondary button-small"><?php _e( 'Scan folders', $this->plugin_slug ); ?></button>
 						<div id="wpfluxbb_scan_results"><pre></pre></div>
 					</td>
 				</tr>
 			</tbody>
 		</table>
 
-		<h3 class="title"><?php _e( 'FluxBB User Import', 'wp-fluxbb' ); ?></h3>
+		<h3 class="title"><?php _e( 'FluxBB User Import', $this->plugin_slug ); ?></h3>
 		<table class="form-table">
 			<tbody>
 				<tr>
-					<th><label for="fluxbb_config_file"><?php _e( 'Synchronise WordPress and FluxBB Users', 'wp-fluxbb' ); ?></label></th>
+					<th><label for="fluxbb_config_file"><?php _e( 'Synchronise WordPress and FluxBB Users', $this->plugin_slug ); ?></label></th>
 					<td>
 <?php $users = $this->wpfluxbb_get_missing_users(); ?>
-						<button id="wpfluxbb_user_sync" class="button button-secondary button-small" <?php if ( ! count( $users ) ) echo 'disabled'; ?>><?php _e( 'Synchronise Users', 'wp-fluxbb' ); ?></button>
-						<div id="wpfluxbb_user_sync_results"></div>
+						<button id="wpfluxbb_user_sync" class="button button-secondary button-small" <?php if ( ! count( $users ) ) echo 'disabled'; ?>><?php _e( 'Synchronise Users', $this->plugin_slug ); ?></button>
+						<div id="wpfluxbb_user_sync_errors"></div><div id="wpfluxbb_user_sync_results"></div>
 						<p>
-							<em><?php printf( __( 'Currently %s FluxBB Users are not synchronised with WordPress.', 'wp-fluxbb' ), '<strong>' . count( $users ) . '</strong>' ); ?>
-							<a href="#" onclick="l=document.getElementById('missing_users_list');if(l.style.display!='none'){l.style.display='none';this.innerHTML='<?php _e( 'Show the list', 'wp-fluxbb' ); ?>';}else{l.style.display='block';this.innerHTML='<?php _e( 'Hide the list', 'wp-fluxbb' ); ?>';}return false;"><?php _e( 'Show the list', 'wp-fluxbb' ); ?></a></em>
+							<em><?php printf( __( 'Currently %s FluxBB Users are not synchronised with WordPress.', $this->plugin_slug ), '<strong>' . count( $users ) . '</strong>' ); ?>
+							<a href="#" onclick="l=document.getElementById('missing_users_list');if(l.style.display!='none'){l.style.display='none';this.innerHTML='<?php _e( 'Show the list', $this->plugin_slug ); ?>';}else{l.style.display='block';this.innerHTML='<?php _e( 'Hide the list', $this->plugin_slug ); ?>';}return false;"><?php _e( 'Show the list', $this->plugin_slug ); ?></a></em>
 						</p>
 						<div id="missing_users_list" style="display:none"><?php
 foreach ( $users as $i => $user ) {

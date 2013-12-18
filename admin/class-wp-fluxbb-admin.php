@@ -133,9 +133,10 @@ class WPFluxBB_Admin {
 			wp_localize_script(
 				$this->plugin_slug . '-admin-script', 'wp_ajax_',
 				array(
-					'ajax_url'     => admin_url( 'admin-ajax.php' ),
-					'file_exists'  => __( 'File {file} exists.', $this->plugin_slug ),
-					'file_invalid' => __( 'File {file} is invalid.', $this->plugin_slug )
+					'ajax_url'      => admin_url( 'admin-ajax.php' ),
+					'n_users_added' => __( '{n} User(s) added succesfully.', $this->plugin_slug ),
+					'file_exists'   => __( 'File {file} exists.', $this->plugin_slug ),
+					'file_invalid'  => __( 'File {file} is invalid.', $this->plugin_slug )
 				)
 			);
 		}
@@ -400,7 +401,7 @@ class WPFluxBB_Admin {
 	private function wpfluxbb_test_config_file( $file ) {
 
 		if ( is_null( $file ) )
-			return __( 'Wrong file path.', 'wp-fluxbb' );
+			return __( 'Wrong file path.', $this->plugin_slug );
 
 		$validate = $this->wpfluxbb_validate_config_file( $file );
 		if ( ! empty( $validate['errors'] ) )
@@ -411,7 +412,7 @@ class WPFluxBB_Admin {
 		$test_db = new wpdb( $db_username, $db_password, $db_name, $db_host );
 
 		if ( ! empty( $test_db->error ) )
-			return __( 'Failed to connect to the database.', 'wp-fluxbb' );
+			return __( 'Failed to connect to the database.', $this->plugin_slug );
 
 		return array();
 	}
@@ -442,7 +443,7 @@ class WPFluxBB_Admin {
 		array_walk( $wp_users, create_function( '&$user', '$user = \'"\'.$user["users"].\'"\';' ) );
 		$wp_users = implode( ', ', $wp_users );
 
-		$users = $this->plugin->fluxdb->get_results( "SELECT * FROM {$this->plugin->fluxdb->users} WHERE id != 1 AND username NOT IN ( {$wp_users} ) ORDER BY username LIMIT 0,5" );
+		$users = $this->plugin->fluxdb->get_results( "SELECT * FROM {$this->plugin->fluxdb->users} WHERE id != 1 AND username NOT IN ( {$wp_users} ) ORDER BY username LIMIT 0,2" );
 
 		return $users;
 	}
@@ -455,9 +456,11 @@ class WPFluxBB_Admin {
 	public function wpfluxbb_user_sync() {
 
 		$users = $this->wpfluxbb_get_missing_users();
-		$users_ids = array();
-		$warnings  = array();
-		$new_users = array();
+
+		$new_users = array(
+			'users'  => array(),
+			'errors' => array()
+		);
 
 		if ( empty( $users ) )
 			return false;
@@ -469,19 +472,19 @@ class WPFluxBB_Admin {
 			$email    = $user->email;
 
 			if ( ! is_null( username_exists( $username ) ) ) {
-				$warnings[] = sprintf( __( 'Username "%s" already exists.', 'wp-fluxbb' ), $username );
+				$new_users['errors'][] = sprintf( __( 'Username "%s" already exists.', $this->plugin_slug ), $username );
 			}
 			else if ( false !== email_exists( $email ) ) {
-				$warnings[] = sprintf( __( 'Email address "%s" already exists.', 'wp-fluxbb' ), $email );
+				$new_users['errors'][] = sprintf( __( 'Email address "%s" already exists.', $this->plugin_slug ), $email );
 			}
 			else {
-				/*$user_id = wp_create_user( $username, $password, $email );
+				$user_id = wp_create_user( $username, $password, $email );
 				$new_user = new WP_User( $user_id );
 
 				if ( ! is_wp_error( $new_user ) ) {
 					$new_user->set_role( 'contributor' );
 					$change_pass = $this->plugin->wpdb->update( 
-						'users',
+						$this->plugin->wpdb->users,
 						array( 'user_pass' => 'WPFLUXBB' ),
 						array( 'ID' => $user_id ),
 						array( '%s' ),
@@ -489,14 +492,16 @@ class WPFluxBB_Admin {
 					);
 
 					if ( false === $change_pass )
-						$warnings[] = sprintf( __( 'An error occured while updating User "%s" password.', 'wp-fluxbb' ), $username );
+						$new_users['errors'][] = sprintf( __( 'An error occured while updating User "%s" password: "%s"', $this->plugin_slug ), $username, $this->plugin->wpdb->last_error );
+				}
+				else {
+					$new_users['errors'][] = $new_user->get_error_message();
 				}
 
-				$new_users[] = array(
+				$new_users['users'][] = array(
 					'id'   => $new_user->get( 'ID' ),
 					'name' => $new_user->get( 'user_login' )
-				);*/
-				$new_users[] = array( $username, $password, $email );
+				);
 			}
  
 		}

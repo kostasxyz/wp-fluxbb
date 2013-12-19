@@ -79,7 +79,8 @@
 					url: wp_ajax_.ajax_url,
 					type: 'GET',
 					data: {
-						action: 'user_sync'
+						action: 'user_sync',
+						notify: $('#wpfluxbb_user_sync_notify').is(':checked')
 					},
 					beforeSend: function() {
 						$('#wpfluxbb_user_sync').addClass('loading');

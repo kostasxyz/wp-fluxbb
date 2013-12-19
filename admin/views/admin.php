@@ -85,7 +85,8 @@
 					</th>
 					<td>
 <?php $users = $this->wpfluxbb_get_missing_users(); ?>
-						<button id="wpfluxbb_user_sync" class="button button-secondary button-small" <?php if ( ! count( $users ) ) echo 'disabled'; ?>><?php _e( 'Synchronise Users', $this->plugin_slug ); ?></button>
+						<button id="wpfluxbb_user_sync" class="button button-secondary button-small" <?php if ( ! count( $users ) ) echo 'disabled'; ?>><?php _e( 'Synchronise Users', $this->plugin_slug ); ?></button><br />
+						<label for="wpfluxbb_user_sync_notify"><input type="checkbox" id="wpfluxbb_user_sync_notify" value="" /> <?php _e( 'Send Users a notification', $this->plugin_slug ); ?></label>
 						<div id="wpfluxbb_user_sync_errors"></div><div id="wpfluxbb_user_sync_results"></div>
 						<p>
 							<em><?php printf( __( 'Currently %s FluxBB Users are not synchronised with WordPress.', $this->plugin_slug ), '<strong>' . count( $users ) . '</strong>' ); ?>

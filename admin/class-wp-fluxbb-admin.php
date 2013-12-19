@@ -452,8 +452,10 @@ class WPFluxBB_Admin {
 	 * Create new WordPress Users using FluxBB userdata.
 	 *
 	 * @since    1.0.0
+	 * 
+	 * @param    boolean  $notify Do we send Users a registration notification by mail
 	 */
-	public function wpfluxbb_user_sync() {
+	public function wpfluxbb_user_sync( $notify = false ) {
 
 		$users = $this->wpfluxbb_get_missing_users();
 
@@ -493,6 +495,8 @@ class WPFluxBB_Admin {
 
 					if ( false === $change_pass )
 						$new_users['errors'][] = sprintf( __( 'An error occured while updating User "%s" password: "%s"', $this->plugin_slug ), $username, $this->plugin->wpdb->last_error );
+					else if ( true === $notify )
+						wp_mail( $email, __( 'Welcome!', $this->plugin_slug ), sprintf( __( 'Your FluxBB Account on "%s" has just been synchronised: you can now log in to the website and the forum at once using your FluxBB username and password.', $this->plugin_slug ), get_bloginfo( 'name' ) );
 				}
 				else {
 					$new_users['errors'][] = $new_user->get_error_message();

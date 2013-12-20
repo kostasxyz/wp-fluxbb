@@ -89,9 +89,13 @@ class WPFluxBB {
 		);
 		$this->wpfluxbb_default_settings();
 
+		add_action( 'enqueue_styles', array( $this, 'enqueue_styles' ) );
 		add_action( 'wp_authenticate', array( $this, 'wpfluxbb_authenticate' ), 1, 2 );
 		add_action( 'login_head', array( $this, 'wpfluxbb_remove_login_logo' ) );
+		add_action( 'login_footer', array( $this, 'wpfluxbb_login_footer' ) );
 
+		add_filter( 'allowed_redirect_hosts', array( $this, 'wpfluxbb_allow_forum_redirect' ) );
+		add_filter( 'login_redirect', array( $this, 'wpfluxbb_login_redirect' ) );
 		add_filter( 'register_url', array( $this, 'wpfluxbb_register_url' ) );
 		add_filter( 'lostpassword_url', array( $this, 'wpfluxbb_lostpassword_url' ) );
 
@@ -325,6 +329,15 @@ class WPFluxBB {
 
 	}
 
+        /**
+         * Register and enqueue public-facing style sheet.
+         *
+         * @since    1.0.0
+         */
+        public function enqueue_styles() {
+                wp_enqueue_style( $this->plugin_slug . '-plugin-styles', plugins_url( 'assets/css/public.css', __FILE__ ), array(), self::VERSION );
+        }
+
 	/**
 	 * Load WPFluxBB default settings if unexisting.
 	 *
@@ -345,8 +358,7 @@ class WPFluxBB {
 	 * @since    1.0.0
 	 */
 	public function wpfluxbb_register_url( $url ) {
-		return $this->wpfluxbb_o('fluxbb_base_url') . '/register.php';
-		return $url;
+		return ( '' != $this->wpfluxbb_o('fluxbb_base_url') ? esc_url( $this->wpfluxbb_o('fluxbb_base_url') ) . '/register.php' : $url );
 	}
 
 	/**
@@ -356,8 +368,7 @@ class WPFluxBB {
 	 * @since    1.0.0
 	 */
 	public function wpfluxbb_lostpassword_url( $url ) {
-		return $this->wpfluxbb_o('fluxbb_base_url') . '/login.php?action=forget';
-		return $url;
+		return ( '' != $this->wpfluxbb_o('fluxbb_base_url') ? esc_url( $this->wpfluxbb_o('fluxbb_base_url') ) . '/login.php?action=forget' : $url );
 	}
 
 	/**
@@ -369,6 +380,58 @@ class WPFluxBB {
 	public function wpfluxbb_remove_login_logo() {
 		if ( 1 == $this->wpfluxbb_o('remove_login_logo') )
 			echo '<style type="text/css">h1 a {background:transparent !important;}</style>';
+	}
+
+	/**
+	 * Replace the WordPress "Back to Blog" link by a link to the Forum.
+	 * Actually we can't simply remove the link, so we include a style block
+	 * to hide it and insert a new look-alike link below.
+	 * 
+	 * @since    1.0.0
+	 */
+	public function wpfluxbb_login_footer() {
+		if ( '' != $this->wpfluxbb_o('fluxbb_base_url') ) {
+			echo '<style type="text/css">#backtoblog {display:none;} .login #nav, #backtoforum {text-align:center;} #backtoforum {margin:auto;padding:12px 0 0 0;width:320px;}</style>';
+			echo '<p id="backtoforum"><a href="' . esc_url( $this->wpfluxbb_o('fluxbb_base_url') ) . '" title="' . esc_attr__( 'Are you lost?' ) . '">' . sprintf( __( '&larr; Back to %s' ), get_bloginfo( 'title', 'display' ) ) . '</a></p>';
+		}
+	}
+
+	/**
+	 * Change the Login Redirect URL to redirect Users to the Forum after
+	 * Loggin in if the User came from it. This allows the possibility to
+	 * Log in directly to WordPress and reach the Dashboard like usual.
+	 * 
+	 * @since    1.0.0
+	 *
+	 * @param    string    $redirect_to    The default redirect URL
+	 *
+	 * @return   string    New redirect URL
+	 */
+	public function wpfluxbb_login_redirect( $redirect_to ) {
+
+		$forum = $this->wpfluxbb_o('fluxbb_base_url');
+		if ( ! is_null( $_SERVER['HTTP_REFERER'] ) && trailingslashit( $forum ) == trailingslashit( $_SERVER['HTTP_REFERER'] ) )
+			$redirect_to = $forum;
+
+		return $redirect_to;
+	}
+
+	/**
+	 * Add the forum URL to the Allowed Redirect Hosts list.
+	 * 
+	 * @since    1.0.0
+	 *
+	 * @param    array     $hosts    The default Allowed Hosts
+	 *
+	 * @return   array     Completed Hosts list
+	 */
+	public function wpfluxbb_allow_forum_redirect( $hosts ) {
+		
+		$forum = parse_url( $this->wpfluxbb_o('fluxbb_base_url') );
+		if ( '' != $forum['host'] )
+			$hosts[] = $forum['host'];
+
+		return $hosts;
 	}
 
 	/**

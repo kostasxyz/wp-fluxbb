@@ -94,6 +94,8 @@ class WPFluxBB {
 		add_action( 'login_head', array( $this, 'wpfluxbb_remove_login_logo' ) );
 		add_action( 'login_footer', array( $this, 'wpfluxbb_login_footer' ) );
 
+		add_action( 'profile_update', array( $this, 'wpfluxbb_profile_update' ), 1, 2 );
+
 		add_filter( 'allowed_redirect_hosts', array( $this, 'wpfluxbb_allow_forum_redirect' ) );
 		add_filter( 'login_redirect', array( $this, 'wpfluxbb_login_redirect' ) );
 		add_filter( 'register_url', array( $this, 'wpfluxbb_register_url' ) );
@@ -432,6 +434,92 @@ class WPFluxBB {
 			$hosts[] = $forum['host'];
 
 		return $hosts;
+	}
+
+	/**
+	 * Triggered by the 'profile_update' Action Hook in wp_insert_user().
+	 * When a User updates its WordPress Profile, edited fields are passed
+	 * to FluxBB to update the Forum's Profile.
+	 * 
+	 * Allowed fields are 'user_email', 'user_url', 'user_nicename' and
+	 * 'display_name'.
+	 * 
+	 * @since    1.0.0
+	 * 
+	 * @see wp_insert_user() For what fields can be set in $userdata
+	 *
+	 * @param    int       $user_id            ID of the Edited User
+	 * @param    object    $update_userdata    Updated User Data from wp_insert_user()
+	 */
+	public function wpfluxbb_profile_update( $user_id, $update_userdata ) {
+
+		$allowed_fields = array( 'user_email', 'user_url', 'user_nicename', 'display_name' );
+
+		$user = new WP_User( $user_id );
+		if ( is_wp_error( $user ) )
+			return false;
+
+		$current_userdata = get_object_vars( $user->data );
+		$update_userdata  = get_object_vars( $update_userdata );
+		$fields = array();
+
+		foreach ( $current_userdata as $slug => $data ) {
+			if ( in_array( $slug, $allowed_fields ) && isset( $update_userdata[ $slug ] ) && $update_userdata[ $slug ] != $data ) {
+				$fields[ $slug ] => $data;
+			}
+		}
+
+		$this->wpfluxbb_update_fluxbb_profile( $user_id, $fields );
+
+	}
+
+	/**
+	 * Propagate Profile changes to FluxBB Profiles.
+	 * 
+	 * @since    1.0.0
+	 *
+	 * @param    int       $user_id    ID of the Edited User
+	 * @param    array     $data       Updated User Data from wp_insert_user()
+	 */
+	public function wpfluxbb_update_fluxbb_profile( $user_id, $data ) {
+
+		if ( ! $this->fluxdb || empty( $data ) )
+			return false;
+
+		$set = array();
+
+		foreach ( $data as $field => $value ) {
+			switch ( $field ) {
+				case 'user_email':
+					$set[] = sprintf( 'SET email = "%s"', esc_url( $value ) );
+					break;
+				case 'user_url':
+					$set[] = sprintf( 'SET url = "%s"', esc_url( $value ) );
+					break;
+				case 'user_nicename':
+				case 'display_name':
+					$set[] = sprintf( 'SET realname = "%s"', esc_attr( $value ) );
+					break;
+				case 'user_pass':
+				default:
+					    break;
+			}
+		}
+
+		if ( empty( $set ) )
+			return false;
+
+		$set = implode( ', ', $set );
+
+		$fluxbb_id = get_user_meta( $user_id, 'fluxbb_id', true );
+
+		$this->fluxdb->query(
+			$this->fluxdb->prepare(
+				"UPDATE {$this->fluxdb->users} $set WHERE id = %d",
+				$fluxbb_id
+			)
+		);
+
 	}
 
 	/**

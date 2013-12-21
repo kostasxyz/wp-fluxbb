@@ -91,6 +91,7 @@ class WPFluxBB {
 
 		add_action( 'enqueue_styles', array( $this, 'enqueue_styles' ) );
 		add_action( 'wp_authenticate', array( $this, 'wpfluxbb_authenticate' ), 1, 2 );
+		add_action( 'wp_logout', array( $this, 'wpfluxbb_logout' ) );
 		add_action( 'login_head', array( $this, 'wpfluxbb_remove_login_logo' ) );
 		add_action( 'login_footer', array( $this, 'wpfluxbb_login_footer' ) );
 
@@ -465,7 +466,7 @@ class WPFluxBB {
 
 		foreach ( $current_userdata as $slug => $data ) {
 			if ( in_array( $slug, $allowed_fields ) && isset( $update_userdata[ $slug ] ) && $update_userdata[ $slug ] != $data ) {
-				$fields[ $slug ] => $data;
+				$fields[ $slug ][] = $data;
 			}
 		}
 
@@ -538,6 +539,8 @@ class WPFluxBB {
 	/**
 	 * Log User to FluxBB using wp_authenticate hook.
 	 * 
+	 * TODO: implement fluxbb_id User Meta
+	 * 
 	 * @since    1.0.0
 	 *
 	 * @param    string    $user_login    User login
@@ -558,10 +561,11 @@ class WPFluxBB {
 		);
 
 		// Is this a FluxBB user?
-		if ( $this->wpfluxbb_hash( $user_pass ) == $user->password )
-			$this->wpfluxbb_setcookie( $user );
-		else
+		if ( $this->wpfluxbb_hash( $user_pass ) != $user->password )
 			return false;
+
+		$this->wpfluxbb_setcookie( $user );
+		$this->wpfluxbb_update_user_password( $user->id, $user_pass, $user );
 
 		// Get WordPress User account if existing
 		$wp_user = $this->wpdb->get_row(
@@ -579,6 +583,22 @@ class WPFluxBB {
 	}
 
 	/**
+	 * Log the User off.
+	 * 
+	 * @since    1.0.0
+	 */
+	public function wpfluxbb_logout() {
+
+		$cookie = $this->fluxbb_config['cookie'];
+		$expire = time() - 3600;
+
+		if ( version_compare( PHP_VERSION, '5.2.0', '>=' ) )
+			$c = setcookie( $cookie['name'], null, $expire, $cookie['path'], $cookie['domain'], $cookie['secure'], true );
+		else
+			$c = setcookie( $cookie['name'], null, $expire, $cookie['path'] . '; HttpOnly', $cookie['domain'], $cookie['secure'] );
+	}
+
+	/**
 	 * Register a new WordPress User based on FluxBB User.
 	 * This function is a copy of WordPress' register_new_user() function
 	 * except we avoid the random generated password.
@@ -593,8 +613,42 @@ class WPFluxBB {
 	 * @return   int|WP_Error     User ID if registered successfully, WP_Error else
 	 */
 	public function wpfluxbb_register_new_user( $user_login, $user_pass, $userdata ) {
+
 		$user_id = wp_create_user( $user_login, $user_pass, $userdata->email );
+
+		if ( ! is_wp_error( $user_id ) )
+			add_user_meta( $user_id, 'fluxbb_id', $userdata->id, true );
+
 		return $user_id;
+	}
+
+	/**
+	 * Update a WordPress User's Password. Replace a dummy password created
+	 * on auto-registration by the actual, FluxBB valid password.
+	 * 
+	 * @since    1.0.0
+	 *
+	 * @param    int       $fluxbb_id     User's FluxBB ID
+	 * @param    string    $user_pass     User's FluxBB password
+	 * @param    object    $user          User's FluxBB data
+	 *
+	 * @return   boolean   True if password was updated, false else.
+	 */
+	public function wpfluxbb_update_user_password( $fluxbb_id, $user_pass, $user = null ) {
+
+		$wp_user = get_users(
+			array(
+				'meta_key'   => 'fluxbb_id',
+				'meta_value' => (int) $fluxbb_id
+			)
+		);
+
+		if ( '' == $user_pass || empty( $wp_user ) || 'WPFLUXBB' != $wp_user[0]->data->user_pass )
+			return false;
+
+		$change_pass = wp_set_password( $user_pass, $wp_user[0]->ID );
+
+		return true;
 	}
 
 	/**

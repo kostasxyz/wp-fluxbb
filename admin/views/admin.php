@@ -20,7 +20,8 @@
 
 	<form name="form" method="post">
 
-		<input type="hidden" id="_wpnonce" name="_wpnonce" value="c01e7d7e46"><input type="hidden" name="_wp_http_referer" value="/wp-admin/options-permalink.php">
+		<?php wp_nonce_field( 'wpfluxbb-settings' ); ?>
+
 		<p><?php _e( '', $this->plugin_slug ); ?></p>
 
 		<h3 class="title"><?php _e( 'WP-FluxBB Options', $this->plugin_slug ); ?></h3>

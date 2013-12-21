@@ -170,8 +170,11 @@ class WPFluxBB_Admin {
 	 */
 	public function display_plugin_admin_page() {
 
-		if ( isset( $_POST['wpfluxbb'] ) && '' != $_POST['wpfluxbb'] )
+		if ( isset( $_POST['wpfluxbb'] ) && '' != $_POST['wpfluxbb'] ) {
+
+			check_admin_referer( 'wpfluxbb-settings');
 			update_option( 'wpfluxbb_settings', $_POST['wpfluxbb'] );
+		}
 
 		include_once( 'views/admin.php' );
 	}
@@ -354,18 +357,24 @@ class WPFluxBB_Admin {
 
 		if ( $size && $perm ) {
 
+			// Get file content
 			$content = file_get_contents( $file );
 			$valid['content'] = $content;
 
+			// Check for required variables
 			foreach ( $required_vars as $req ) {
+
 				$var_name = '$' . $req[0];
 				$required = $req[1];
+
+				// Can't find variable
 				if ( false === stripos( $content, $var_name ) ) {
 					$valid['errors'][] = array(
 						'error_code' => 2,
 						'error_message' => sprintf( __( 'Variable "%s" is missing in %s file.', $this->plugin_slug ), $var_name, $file )
 					);
 				}
+				// Variable found but empty
 				else if ( $required && preg_match( '~^\s*'.'\\'.$var_name.'\s*=\s*(["\'])\s*\1[^\S\r\n]*\R?~m', $content ) ) {
 					$valid['errors'][] = array(
 						'error_code' => 3,
@@ -403,6 +412,7 @@ class WPFluxBB_Admin {
 		if ( is_null( $file ) )
 			return __( 'Wrong file path.', $this->plugin_slug );
 
+		// Is the config file valid?
 		$validate = $this->wpfluxbb_validate_config_file( $file );
 		if ( ! empty( $validate['errors'] ) )
 			return array( 'errors' => $validate['errors'] );
@@ -431,6 +441,7 @@ class WPFluxBB_Admin {
 
 		$users = array();
 
+		// TODO: clean up this query. Better way than UNION?
 		$wp_users = $this->plugin->wpdb->get_results(
 			"SELECT user_login AS users FROM {$this->plugin->wpdb->users}
 			 UNION
@@ -480,11 +491,18 @@ class WPFluxBB_Admin {
 				$new_users['errors'][] = sprintf( __( 'Email address "%s" already exists.', $this->plugin_slug ), $email );
 			}
 			else {
+				// Create user account
 				$user_id = wp_create_user( $username, $password, $email );
 				$new_user = new WP_User( $user_id );
 
 				if ( ! is_wp_error( $new_user ) ) {
-					$new_user->set_role( 'contributor' );
+
+					// Make the user a simple reader
+					$new_user->set_role( 'suscriber' );
+
+					// Add a dummy password. We can't know the User's password,
+					// so we leave a dummy text for now and will update it on
+					// next login.
 					$change_pass = $this->plugin->wpdb->update( 
 						$this->plugin->wpdb->users,
 						array( 'user_pass' => 'WPFLUXBB' ),
@@ -493,6 +511,10 @@ class WPFluxBB_Admin {
 						array( '%d' ) 
 					);
 
+					// Add a fluxbb_id meta to associate both accounts
+					add_user_meta( $user_id, 'fluxbb_id', $user->id, true );
+
+					// dummy pass update failed
 					if ( false === $change_pass )
 						$new_users['errors'][] = sprintf( __( 'An error occured while updating User "%s" password: "%s"', $this->plugin_slug ), $username, $this->plugin->wpdb->last_error );
 					else if ( true === $notify )

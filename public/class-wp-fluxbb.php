@@ -82,6 +82,7 @@ class WPFluxBB {
 		$this->settings = array(
 			'fluxbb_config_file' => '',
 			'fluxbb_base_url' => '',
+			'fluxbb_lang' => 'English',
 			'wpfluxbb' => array(
 				'auto_insert_user'  => 0,
 				'remove_login_logo' => 1,
@@ -94,7 +95,7 @@ class WPFluxBB {
 		add_action( 'wp_logout', array( $this, 'wpfluxbb_logout' ) );
 		add_action( 'login_head', array( $this, 'wpfluxbb_remove_login_logo' ) );
 		add_action( 'login_footer', array( $this, 'wpfluxbb_login_footer' ) );
-
+		add_action( 'user_register', array( $this, 'wpfluxbb_user_register' ) );
 		add_action( 'profile_update', array( $this, 'wpfluxbb_profile_update' ), 1, 2 );
 
 		add_filter( 'allowed_redirect_hosts', array( $this, 'wpfluxbb_allow_forum_redirect' ) );
@@ -583,7 +584,7 @@ class WPFluxBB {
 	}
 
 	/**
-	 * Log the User off.
+	 * Log the User off by replacing FluxBB Cookie by a void one.
 	 * 
 	 * @since    1.0.0
 	 */
@@ -603,7 +604,8 @@ class WPFluxBB {
 	 * This function is a copy of WordPress' register_new_user() function
 	 * except we avoid the random generated password.
 	 * 
-	 * @see https://github.com/WordPress/WordPress/blob/master/wp-includes/user.php#L1661
+	 * @see register_new_user()
+	 * @link https://codex.wordpress.org/Function_Reference/register_new_user
 	 * 
 	 * @since    1.0.0
 	 *
@@ -620,6 +622,56 @@ class WPFluxBB {
 			add_user_meta( $user_id, 'fluxbb_id', $userdata->id, true );
 
 		return $user_id;
+	}
+
+	/**
+	 * Duplicate newly registered User by adding a new User to FluxBB.
+	 * 
+	 * We can't access the WordPress Password as is (generated randomly,
+	 * see register_new_user() function) so we use a dummy password that
+	 * will be update in the next login.
+	 * 
+	 * @since    1.0.0
+	 * @see register_new_user()
+	 * @link https://codex.wordpress.org/Function_Reference/register_new_user
+	 *
+	 * @param    array     $user_id    WordPress User ID
+	 *
+	 * @return   boolean   True on success, false on failure.
+	 */
+	public function wpfluxbb_user_register( $user_id ) {
+
+		$user = new WP_User( $user_id );
+
+		if ( ! $this->fluxdb || ! $user->exists() )
+			return false;
+
+		$create_user = $this->fluxdb->insert(
+			$this->fluxdb->users,
+			array(
+				'username'        => $user->user_login,
+				'email'           => $user->email,
+				'password'        => 'WPFLUXBB',
+				'language'        => $this->wpfluxbb_o('fluxbb_lang'),
+				'group_id'        => 4,
+				'registered'      => time(),
+				'registration_ip' => time(),
+				'last_visit'      => isset( $_SERVER['REMOTE_ADDR'] ) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0'
+			),
+			array(
+				'%s',
+				'%s',
+				'%s',
+				'%s',
+				'%d',
+				'%d',
+				'%d',
+				'%d'
+			)
+		);
+		$fluxbb_id = $this->fluxdb->insert_id;
+
+		return $fluxbb_id;
 	}
 
 	/**

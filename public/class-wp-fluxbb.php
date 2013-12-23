@@ -95,7 +95,7 @@ class WPFluxBB {
 		add_action( 'wp_logout', array( $this, 'wpfluxbb_logout' ) );
 		add_action( 'login_head', array( $this, 'wpfluxbb_remove_login_logo' ) );
 		add_action( 'login_footer', array( $this, 'wpfluxbb_login_footer' ) );
-		add_action( 'user_register', array( $this, 'wpfluxbb_user_register' ) );
+		add_action( 'user_register', array( $this, 'wpfluxbb_register_fx_user' ) );
 		add_action( 'profile_update', array( $this, 'wpfluxbb_profile_update' ), 1, 2 );
 
 		add_filter( 'allowed_redirect_hosts', array( $this, 'wpfluxbb_allow_forum_redirect' ) );
@@ -618,7 +618,7 @@ class WPFluxBB {
 			// really exists before trying anything.
 			$wp_user = wp_authenticate( $user_login, $user_pass );
 			if ( ! is_wp_error( $wp_user ) )
-				$this->wpfluxbb_user_register( $wp_user->ID, $user_pass );
+				$this->wpfluxbb_register_fx_user( $wp_user->ID, $user_pass );
 		}
 
 		// FluxBB User but not WordPress User
@@ -626,7 +626,7 @@ class WPFluxBB {
 
 			// Validates FluxBB Password
 			if ( $this->wpfluxbb_hash( $user_pass ) == $user->password )
-				$this->wpfluxbb_register_new_user( $user_login, $user_pass, $fx_user );
+				$this->wpfluxbb_register_wp_user( $user_login, $user_pass, $fx_user );
 		}
 
 		// User doesn't exists
@@ -668,7 +668,7 @@ class WPFluxBB {
 	 *
 	 * @return   int|WP_Error     User ID if registered successfully, WP_Error else
 	 */
-	public function wpfluxbb_register_new_user( $user_login, $user_pass, $userdata ) {
+	public function wpfluxbb_register_wp_user( $user_login, $user_pass, $userdata ) {
 
 		$user_id = wp_create_user( $user_login, $user_pass, $userdata->email );
 
@@ -700,7 +700,7 @@ class WPFluxBB {
 	 *
 	 * @return   boolean   True on success, false on failure.
 	 */
-	public function wpfluxbb_user_register( $user_id, $user_pass = null ) {
+	public function wpfluxbb_register_fx_user( $user_id, $user_pass = null ) {
 
 		$user = new WP_User( $user_id );
 

@@ -538,9 +538,16 @@ class WPFluxBB {
 	}
 
 	/**
-	 * Log User to FluxBB using wp_authenticate hook.
+	 * Log User using wp_authenticate hook, checks for User duplicate
+	 * Account and Dummy Passwords.
 	 * 
-	 * TODO: implement fluxbb_id User Meta
+	 * If a User logs in, we check if it exists on WordPress and FluxBB. If
+	 * it exists on both, check for dummy passwords and update them if the
+	 * other password is valid. If User exists only in one CMS, check the
+	 * authentification validity and create the matching Account.
+	 * 
+	 * 
+	 * TODO: check setcookie correct implementation.
 	 * 
 	 * @since    1.0.0
 	 *
@@ -554,31 +561,78 @@ class WPFluxBB {
 		if ( ! $this->fluxdb || ! isset( $user_login ) && ! isset( $user_pass ) || '' == $user_login || '' == $user_pass )
 			return false;
 
-		$user = $this->fluxdb->get_row(
-			$this->fluxdb->prepare(
-				"SELECT * FROM {$this->fluxdb->users} WHERE username = %s LIMIT 1",
-				$user_login
-			)
-		);
+		$wp_user = new WP_User( $user_login );
+		$is_wp_user = $wp_user->exists();
 
-		// Is this a FluxBB user?
-		if ( $this->wpfluxbb_hash( $user_pass ) != $user->password )
+		$fx_user = $this->fluxdb->get_row( $this->fluxdb->prepare( "SELECT * FROM {$this->fluxdb->users} WHERE username = %s LIMIT 1", $user_login ) );
+		$is_fx_user = is_null( $fx_user );
+
+		// User exists on both WordPress and FluxBB
+		if ( $is_wp_user && $is_fx_user ) {
+			
+			$fx_user = $fx_user[0];
+
+			// Password check for both accounts
+			$wp_check = wp_check_password( $user_pass, $wp_user->data->user_pass, $wp_user->ID );
+			$fx_check = ( $this->wpfluxbb_hash( $user_pass ) == $user->password );
+
+			// Invalid FluxBB and WordPress Passwords? Fail.
+			if ( ! $fx_check && ! $wp_check ) {
+				return false;
+			}
+
+			// Valid FluxBB Password but Dummy WordPress Password? Update it.
+			else if ( $fx_check && ( ! $wp_check && 'WPFLUXBB' == $wp_user->data->user_pass ) ) {
+				wp_set_password( $user_pass, $wp_user->ID );
+				$this->wpfluxbb_setcookie( $fx_user );
+				return true;
+			}
+
+			// Valid WordPress Password but Dummy FluxBB Password? Update it.
+			else if ( $wp_check && ( ! $fx_check && 'WPFLUXBB' == $fx_user->password ) ) {
+				$fluxbb_id = get_user_meta( $wp_user->ID, 'fluxbb_id', true );
+				$this->fluxdb->update(
+					$this->fluxdb->users,
+					array( 'password' => $this->wpfluxbb_hash( $user_pass ) ),
+					array( 'ID' => $fluxbb_id ),
+					array( '%s' ),
+					array( '%d' ) 
+				);
+				$this->wpfluxbb_setcookie( $fx_user );
+				return true;
+			}
+
+			// Valid FluxBB and WordPress Passwords? Set FluxBB cookie.
+			else if ( $fx_check && $wp_check ) {
+				$this->wpfluxbb_setcookie( $fx_user );
+				return true;
+			}
+		}
+
+		// WordPress User but not FluxBB User
+		else if ( $is_wp_user && ! $is_fx_user ) {
+
+			// Valid WordPress User?
+			// This duplicates the authentification that will be done later
+			// in wp_signon(), but we want to make sure the User account 
+			// really exists before trying anything.
+			$wp_user = wp_authenticate( $user_login, $user_pass );
+			if ( ! is_wp_error( $wp_user ) )
+				$this->wpfluxbb_user_register( $wp_user->ID, $user_pass );
+		}
+
+		// FluxBB User but not WordPress User
+		else if ( $is_fx_user && ! $is_wp_user ) {
+
+			// Validates FluxBB Password
+			if ( $this->wpfluxbb_hash( $user_pass ) == $user->password )
+				$this->wpfluxbb_register_new_user( $user_login, $user_pass, $fx_user );
+		}
+
+		// User doesn't exists
+		else if ( ! $is_wp_user && ! $is_fx_user ) {
 			return false;
-
-		$this->wpfluxbb_setcookie( $user );
-		$this->wpfluxbb_update_user_password( $user->id, $user_pass, $user );
-
-		// Get WordPress User account if existing
-		$wp_user = $this->wpdb->get_row(
-			$this->wpdb->prepare(
-				"SELECT id FROM {$this->wpdb->users} WHERE user_login = %s LIMIT 1",
-				$user_login
-			)
-		);
-
-		// Not a WP User yet? Fix this.
-		if ( is_null( $wp_user ) )
-			$this->wpfluxbb_register_new_user( $user_login, $user_pass, $user );
+		}
 
 		return true;
 	}
@@ -625,33 +679,43 @@ class WPFluxBB {
 	}
 
 	/**
-	 * Duplicate newly registered User by adding a new User to FluxBB.
+	 * Duplicate newly registered User by adding a new User to FluxBB. This
+	 * function is meant to be triggered by the 'user_register' hook, but
+	 * can be used directly to specify the password.
 	 * 
 	 * We can't access the WordPress Password as is (generated randomly,
 	 * see register_new_user() function) so we use a dummy password that
 	 * will be update in the next login.
+	 * 
+	 * If the function is called directly and not through the Plugin API,
+	 * a password can be submitted as second parameter and will be added
+	 * the the Database instead of Dummy.
 	 * 
 	 * @since    1.0.0
 	 * @see register_new_user()
 	 * @link https://codex.wordpress.org/Function_Reference/register_new_user
 	 *
 	 * @param    array     $user_id    WordPress User ID
+	 * @param    string    $user_pass  WordPress User Password (optional)
 	 *
 	 * @return   boolean   True on success, false on failure.
 	 */
-	public function wpfluxbb_user_register( $user_id ) {
+	public function wpfluxbb_user_register( $user_id, $user_pass = null ) {
 
 		$user = new WP_User( $user_id );
 
 		if ( ! $this->fluxdb || ! $user->exists() )
 			return false;
 
+		if ( is_null( $user_pass ) )
+			$user_pass = 'WPFLUXBB';
+
 		$create_user = $this->fluxdb->insert(
 			$this->fluxdb->users,
 			array(
 				'username'        => $user->user_login,
 				'email'           => $user->email,
-				'password'        => 'WPFLUXBB',
+				'password'        => $user_pass,
 				'language'        => $this->wpfluxbb_o('fluxbb_lang'),
 				'group_id'        => 4,
 				'registered'      => time(),

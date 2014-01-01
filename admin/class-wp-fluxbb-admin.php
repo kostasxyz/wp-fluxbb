@@ -42,6 +42,15 @@ class WPFluxBB_Admin {
 	protected $plugin_screen_hook_suffix = null;
 
 	/**
+	 * Update Options Message
+	 *
+	 * @since    1.0.0
+	 *
+	 * @var      string
+	 */
+	protected $update_status = null;
+
+	/**
 	 * Initialize the plugin by loading admin scripts & styles and adding a
 	 * settings page and menu.
 	 *
@@ -174,6 +183,8 @@ class WPFluxBB_Admin {
 
 			check_admin_referer( 'wpfluxbb-settings');
 			update_option( 'wpfluxbb_settings', $_POST['wpfluxbb'] );
+
+			$this->update_status = __( 'Options Updated.', 'wpfluxbb' );
 		}
 
 		include_once( 'views/admin.php' );

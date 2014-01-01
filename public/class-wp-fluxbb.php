@@ -100,8 +100,8 @@ class WPFluxBB {
 
 		add_filter( 'allowed_redirect_hosts', array( $this, 'wpfluxbb_allow_forum_redirect' ) );
 		add_filter( 'login_redirect', array( $this, 'wpfluxbb_login_redirect' ) );
-		add_filter( 'register_url', array( $this, 'wpfluxbb_register_url' ) );
-		add_filter( 'lostpassword_url', array( $this, 'wpfluxbb_lostpassword_url' ) );
+		//add_filter( 'register_url', array( $this, 'wpfluxbb_register_url' ) );
+		//add_filter( 'lostpassword_url', array( $this, 'wpfluxbb_lostpassword_url' ) );
 
 	}
 
@@ -565,16 +565,14 @@ class WPFluxBB {
 		$is_wp_user = $wp_user->exists();
 
 		$fx_user = $this->fluxdb->get_row( $this->fluxdb->prepare( "SELECT * FROM {$this->fluxdb->users} WHERE username = %s LIMIT 1", $user_login ) );
-		$is_fx_user = is_null( $fx_user );
+		$is_fx_user = ! is_null( $fx_user );
 
 		// User exists on both WordPress and FluxBB
 		if ( $is_wp_user && $is_fx_user ) {
-			
-			$fx_user = $fx_user[0];
 
 			// Password check for both accounts
 			$wp_check = wp_check_password( $user_pass, $wp_user->data->user_pass, $wp_user->ID );
-			$fx_check = ( $this->wpfluxbb_hash( $user_pass ) == $user->password );
+			$fx_check = ( $this->wpfluxbb_hash( $user_pass ) == $fx_user->password );
 
 			// Invalid FluxBB and WordPress Passwords? Fail.
 			if ( ! $fx_check && ! $wp_check ) {
@@ -591,13 +589,27 @@ class WPFluxBB {
 			// Valid WordPress Password but Dummy FluxBB Password? Update it.
 			else if ( $wp_check && ( ! $fx_check && 'WPFLUXBB' == $fx_user->password ) ) {
 				$fluxbb_id = get_user_meta( $wp_user->ID, 'fluxbb_id', true );
-				$this->fluxdb->update(
-					$this->fluxdb->users,
-					array( 'password' => $this->wpfluxbb_hash( $user_pass ) ),
-					array( 'ID' => $fluxbb_id ),
-					array( '%s' ),
-					array( '%d' ) 
-				);
+
+				if ( '' != $fluxbb_id ) {
+					$this->fluxdb->update(
+						$this->fluxdb->users,
+						array( 'password' => $this->wpfluxbb_hash( $user_pass ) ),
+						array( 'ID' => $fluxbb_id ),
+						array( '%s' ),
+						array( '%d' )
+					);
+				}
+				else {
+					$this->fluxdb->update(
+						$this->fluxdb->users,
+						array( 'password' => $this->wpfluxbb_hash( $user_pass ) ),
+						array( 'username' => $wp_user->user_login ),
+						array( '%s' ),
+						array( '%s' )
+					);
+					add_user_meta( $wp_user->ID, 'fluxbb_id', $fx_user->id, true );
+				}
+
 				$this->wpfluxbb_setcookie( $fx_user );
 				return true;
 			}
@@ -714,7 +726,7 @@ class WPFluxBB {
 			$this->fluxdb->users,
 			array(
 				'username'        => $user->user_login,
-				'email'           => $user->email,
+				'email'           => $user->user_email,
 				'password'        => $user_pass,
 				'language'        => $this->wpfluxbb_o('fluxbb_lang'),
 				'group_id'        => 4,

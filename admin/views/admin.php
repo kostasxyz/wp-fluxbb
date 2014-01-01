@@ -18,6 +18,12 @@
 	<?php screen_icon(); ?>
 	<h2><?php echo esc_html( get_admin_page_title() ); ?></h2>
 
+<?php if ( ! is_null( $this->update_status ) ) : ?>
+	<div id="updated-options" class="updated fade">
+		<p><?php echo $this->update_status; ?></p>
+	</div>
+<?php endif; ?>
+
 	<form name="form" method="post">
 
 		<?php wp_nonce_field( 'wpfluxbb-settings' ); ?>
@@ -32,16 +38,16 @@
 				<tr>
 					<th><?php _e( 'Auto Insert Users', $this->plugin_slug ); ?></th>
 					<td>
-						<label><input name="wpfluxbb[auto_insert_user]" type="radio" value="1" <?php checked( $this->plugin->wpfluxbb_o('auto_insert_user'), 1 ); ?>> <?php _e( 'On', $this->plugin_slug ); ?></label>
-						<label><input name="wpfluxbb[auto_insert_user]" type="radio" value="0" <?php checked( $this->plugin->wpfluxbb_o('auto_insert_user'), 0 ); ?>> <?php _e( 'Off', $this->plugin_slug ); ?></label>
+						<label><input name="wpfluxbb[wpfluxbb][auto_insert_user]" type="radio" value="1" <?php checked( $this->plugin->wpfluxbb_o('wpfluxbb-auto_insert_user'), 1 ); ?>> <?php _e( 'On', $this->plugin_slug ); ?></label>
+						<label><input name="wpfluxbb[wpfluxbb][auto_insert_user]" type="radio" value="0" <?php checked( $this->plugin->wpfluxbb_o('wpfluxbb-auto_insert_user'), 0 ); ?>> <?php _e( 'Off', $this->plugin_slug ); ?></label>
 						<p><em><?php _e( 'If the User trying to log in has a valid FluxBB account but no WordPress account, authentification will fail. If this option is set to "On" WPFluxBB will automatically create a WP Account and validate the authentification. Default if "Off".', $this->plugin_slug ); ?></em></p>
 					</td>
 				</tr>
 				<tr>
 					<th><?php _e( 'Hide WordPress Logo in Login Page', $this->plugin_slug ); ?></th>
 					<td>
-						<label><input name="wpfluxbb[remove_login_logo]" type="radio" value="1" <?php checked( $this->plugin->wpfluxbb_o('remove_login_logo'), 1 ); ?>> <?php _e( 'On', $this->plugin_slug ); ?></label>
-						<label><input name="wpfluxbb[remove_login_logo]" type="radio" value="0" <?php checked( $this->plugin->wpfluxbb_o('remove_login_logo'), 0 ); ?>> <?php _e( 'Off', $this->plugin_slug ); ?></label>
+						<label><input name="wpfluxbb[wpfluxbb][remove_login_logo]" type="radio" value="1" <?php checked( $this->plugin->wpfluxbb_o('wpfluxbb-remove_login_logo'), 1 ); ?>> <?php _e( 'On', $this->plugin_slug ); ?></label>
+						<label><input name="wpfluxbb[wpfluxbb][remove_login_logo]" type="radio" value="0" <?php checked( $this->plugin->wpfluxbb_o('wpfluxbb-remove_login_logo'), 0 ); ?>> <?php _e( 'Off', $this->plugin_slug ); ?></label>
 						<p><em><?php _e( 'WPFluxBB uses WordPress\' Login Page to authenticate users and log them in both WordPress and FluxBB; the WordPress Logo in the Login Page can be misleading and confuse users and therefore is not displayed by default. Turn this to "On" to display the Logo.', $this->plugin_slug ); ?></em></p>
 					</td>
 				</tr>

@@ -420,22 +420,36 @@ class WPFluxBB_Admin {
 	 */
 	private function wpfluxbb_test_config_file( $file ) {
 
-		if ( is_null( $file ) )
-			return __( 'Wrong file path.', $this->plugin_slug );
+		$test = array(
+			'file'    => $file,
+			'success' => '',
+			'errors'  => array()
+		);
+
+		if ( is_null( $file ) ) {
+			$test['errors'][] = array( 'error_code' => 7, 'error_message' => __( 'Wrong file path.', $this->plugin_slug ) );
+			return $test;
+		}
 
 		// Is the config file valid?
 		$validate = $this->wpfluxbb_validate_config_file( $file );
-		if ( ! empty( $validate['errors'] ) )
-			return array( 'errors' => $validate['errors'] );
+		if ( ! empty( $validate['errors'] ) ) {
+			$test['errors'] = $validate['errors'];
+			return $test;
+		}
 
-		require_once $file;
+		require $file;
 
 		$test_db = new wpdb( $db_username, $db_password, $db_name, $db_host );
 
-		if ( ! empty( $test_db->error ) )
-			return __( 'Failed to connect to the database.', $this->plugin_slug );
+		if ( ! empty( $test_db->error ) ) {
+			$test['errors'][] = array( 'error_code' => 8, 'error_message' => __( 'Failed to connect to the database.', $this->plugin_slug ) );
+			return $test;
+		}
 
-		return array();
+		$test['success'] = __( 'Database Connected succesfully. Config File is valid!', $this->plugin_slug );
+
+		return $test;
 	}
 
 	/**

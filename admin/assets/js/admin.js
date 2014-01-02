@@ -52,17 +52,15 @@
 					success: function(response) {
 						$r = $('#wpfluxbb_scan_results pre');
 						$r.empty();
+						response = $.parseJSON(response);
 
-						if ( 'string' == typeof response ) {
-							$r.text(response);
+						if ( undefined != response.errors && response.errors.length ) {
+							$.each(response.errors, function() {
+								$r.append(this.error_message+'\n');
+							});
 						}
-						else {
-							response = $.parseJSON(response);
-							if ( undefined != response.errors ) {
-								$.each(response.errors, function() {
-									$r.append(this.error_message+'\n');
-								});
-							}
+						else if ( undefined != response.success && response.success.length ) {
+							$r.text(response.success);
 						}
 					},
 					complete:function(){

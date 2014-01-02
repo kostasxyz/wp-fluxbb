@@ -82,7 +82,6 @@ class WPFluxBB {
 		$this->settings = array(
 			'fluxbb_config_file' => '',
 			'fluxbb_base_url' => '',
-			'fluxbb_lang' => 'English',
 			'wpfluxbb' => array(
 				'auto_insert_user'  => 0,
 				'remove_login_logo' => 1,
@@ -128,6 +127,12 @@ class WPFluxBB {
 				'password' => $db_password,
 				'prefix'   => $db_prefix,
 			),
+			'config' => array(
+				'lang'       => 'English',
+				'style'      => 'Air',
+				'timezone'   => 1,
+				'user_group' => 4
+			),
 			'cookie' => array(
 				'name'   => $cookie_name,
 				'domain' => $cookie_domain,
@@ -155,7 +160,8 @@ class WPFluxBB {
 		extract( $this->fluxbb_config['db'] );
 
 		$fluxdb = new wpdb( $username, $password, $name, $host );
-		$fluxdb->users = $prefix . 'users';
+		$fluxdb->users  = $prefix . 'users';
+		$fluxdb->config = $prefix . 'config';
 
 		return $fluxdb;
 	}
@@ -354,6 +360,31 @@ class WPFluxBB {
 			delete_option( $this->plugin_settings );
 			add_option( $this->plugin_settings, $this->settings );
 		}
+
+		$this->wpfluxbb_fluxbb_config();
+	}
+
+	/**
+	 * Load FluxBB Config Options from the database
+	 *
+	 * @since    1.0.0
+	 */
+	private function wpfluxbb_fluxbb_config() {
+
+		if ( ! $this->fluxdb )
+			return false;
+
+		$config = $this->fluxdb->get_results( "SELECT conf_name AS name, conf_value AS value FROM {$this->fluxdb->config} WHERE conf_name IN( 'o_default_timezone', 'o_default_lang', 'o_default_style', 'o_default_user_group' )" );
+
+		if ( empty( $config ) )
+			return false;
+
+		foreach ( $config as $option ) {
+			$key = str_replace( 'o_default_', '', $option->name );
+			$this->fluxbb_config['config'][ $key ] = esc_attr( $option->value );
+		}
+
+		return true;
 	}
 
 	/**
@@ -728,8 +759,10 @@ class WPFluxBB {
 				'username'        => $user->user_login,
 				'email'           => $user->user_email,
 				'password'        => $user_pass,
-				'language'        => $this->wpfluxbb_o('fluxbb_lang'),
-				'group_id'        => 4,
+				'language'        => $this->fluxbb_config['config']['lang'],
+				'style'           => $this->fluxbb_config['config']['style'],
+				'group_id'        => $this->fluxbb_config['config']['user_group'],
+				'timezone'        => $this->fluxbb_config['config']['timezone'],
 				'registered'      => time(),
 				'registration_ip' => time(),
 				'last_visit'      => isset( $_SERVER['REMOTE_ADDR'] ) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0'
@@ -739,6 +772,8 @@ class WPFluxBB {
 				'%s',
 				'%s',
 				'%s',
+				'%s',
+				'%d',
 				'%d',
 				'%d',
 				'%d',
